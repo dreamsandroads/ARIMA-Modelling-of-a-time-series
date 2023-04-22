@@ -3,6 +3,8 @@ require(zoo) #format de serie temporelle pratique et facile d'utilisation (mais 
 # install.packages("tseries")
 require(tseries) #diverses fonctions sur les series temporelles
 library(tseries)
+path <- "D:/ENSAE/2A S2/Linear Time Series/Projet"
+setwd(path) #definit l'espace de travail (working directory ou "wd")
 getwd() # working directory
 list.files() # list files in wd
 
@@ -36,21 +38,21 @@ dspread <- diff(spread,1) # differentiation at order 1
 adf <- adf.test(dspread) 
 adf # p value < 0.01 so we reject Ho in favor of the alternative hypothesis
 # lag order 7
-# t-value -8.4042
+# t-value -7.8183
 
 # Phillips-Perron Unit Root Test
 # Ho = unit root = non-stationarity hypothesis
 pp <- pp.test(dspread)
 pp # p value < 0.01 so we reject Ho in favor of the alternative hypothesis
 # lag order 5
-# t value -395.08
+# t value -391.67
 
 # KPSS Stationary Test
 # Ho = stationarity hypothesis
 kpss <- kpss.test(dspread)
 kpss # p value > 0.1 so we can't reject Ho 
 # lag order 5
-# t value 0.15816
+# t value 0.03925
 
 # Conclusion : one differentiation is enough, we can suppose that our series is
 # stationary
@@ -67,9 +69,9 @@ acf(dspread) ; # traces the complete autocorrelation functions
 pacf(dspread) # traces the partial autocorrelation functions
 
 # The ACF is statistically significant in the second order maximum, 
-# we well therefore choose q??? = 2. 
+# we well therefore choose q* = 2. 
 # The PACF is also statistically significant in the third order maximum, 
-# we will pick p??? = 3.
+# we will pick p* = 3.
 
 # So we estimate ARIMA Models with 0 <= p <= 3 and 0 <= q <= 2
 # => AIC and BIC
