@@ -1,89 +1,128 @@
-# PRELIMINARY
-require(zoo) #format de serie temporelle pratique et facile d'utilisation (mais plus volumineux)
+rm(list=ls())
+# ========== import and install required libraries =========
+require(zoo)
 # install.packages("tseries")
-require(tseries) #diverses fonctions sur les series temporelles
+require(tseries) 
 library(tseries)
+# set path
 path <- "D:/ENSAE/2A S2/Linear Time Series/Projet"
-setwd(path) #definit l'espace de travail (working directory ou "wd")
+setwd(path) 
 getwd() # working directory
 list.files() # list files in wd
+# CHOSEN SERIES : https://www.insee.fr/fr/statistiques/serie/010537315#Telechargement
 
-# CHOSEN SERIE : https://www.insee.fr/fr/statistiques/serie/010537315#Telechargement
 
 
 # =========== QUESTION 1 ======================
 datafile <- "valeurs_mensuelles.csv" 
-
-data <- read.csv(datafile,sep=";") #import .csv file into data.frame class
-
+data <- read.csv(datafile,sep=";")
 dates_char <- as.character(data$dates)
 dates_char[1] # first date
 tail(dates_char,1) # last date
-dates <- as.yearmon(seq(from=1990+0/12, to=2019+0/12, by=1/12)) 
+dates <- as.yearmon(seq(from=1990+0/12, to=2017+0/12, by=1/12)) 
 spread <- zoo(data$spread, order.by=dates)
-plot(spread) # plot initial series
-# manufacturing of tabacco based products  
-# decreasing linear trend ?
+plot(spread, xlab = "dates", ylab = "values") # plot initial series
 
 # decomposition of the time series (not necessary)
 decomp<-decompose(spread)  
-plot(decomp) 
+plot(decomp)
+
+# ANSWER: The chosen series represents the Industrial Production Index associated
+# to the manufacturing of tobacco-based products from 1990 until 2017 
+# We observe a decreasing linear trend. The series is not stationary.
 
 # ========== QUESTION 2 ========================
 dspread <- diff(spread,1) # differentiation at order 1
+plot(dspread, xlab="dates", ylab = "dvalues")
+# ANSWER: the differentiated series seems stationary.
 
-# JUSTIFICATION
-# Augmented Dickey-Fuller Test
-# Ho = unit root = non-stationarity hypothesis
+# Stationarity tests
+# 1. Augmented Dickey-Fuller Test
 adf <- adf.test(dspread) 
-adf # p value < 0.01 so we reject Ho in favor of the alternative hypothesis
-# lag order 7
-# t-value -7.8183
+adf 
+# p-value < 0.01
+# Thus we can reject the null hypothesis of non-stationarity at level 1%. 
 
-# Phillips-Perron Unit Root Test
-# Ho = unit root = non-stationarity hypothesis
+# 2. Phillips-Perron Unit Root Test
 pp <- pp.test(dspread)
-pp # p value < 0.01 so we reject Ho in favor of the alternative hypothesis
-# lag order 5
-# t value -391.67
+pp 
+# p-value < 0.01
+# We have the same conclusion.
 
-# KPSS Stationary Test
-# Ho = stationarity hypothesis
+# 3. KPSS Stationary Test
 kpss <- kpss.test(dspread)
-kpss # p value > 0.1 so we can't reject Ho 
-# lag order 5
-# t value 0.03925
+kpss 
+# p-value > 0.1
+# We can't reject the null hypothesis of stationarity at any known level (1%, 5% and 10%).
 
-# Conclusion : one differentiation is enough, we can suppose that our series is
-# stationary
+# ANSWER: we can suppose from now on that our differentiated series is stationary.
 
 
 # ========== QUESTION 3 ========================
 plot(cbind(spread,dspread)) # plot both graphs
 
-# ========== QUESTION 4 ========================
-# Choosing ARMA(p*, q*) model
+
+# ========== QUESTION 4 & 5 ========================
+# Choosing ARMA(p*, q*) best model for prediction
 
 par(mfrow=c(1,2))
 acf(dspread) ; # traces the complete autocorrelation functions 
 pacf(dspread) # traces the partial autocorrelation functions
 
-# The ACF is statistically significant in the second order maximum, 
-# we well therefore choose q* = 2. 
+# The ACF is statistically significant in the 13th order maximum, 
+# we will therefore choose q* = 13. 
 # The PACF is also statistically significant in the third order maximum, 
 # we will pick p* = 3.
 
-# So we estimate ARIMA Models with 0 <= p <= 3 and 0 <= q <= 2
-# => AIC and BIC
+
+# Student Test
+signif <- function(estim){
+  coef <- estim$coef
+  se <- sqrt(diag(estim$var.coef))
+  t <- coef/se
+  pval <- (1-pnorm(abs(t)))???2
+  return(rbind(coef,se,pval))
+}
+
+# Ljung-Box test
+Qtests <- function(series, k, fitdf=0) {
+  pvals <- apply(matrix(1:k), 1, FUN=function(l) {
+    pval <- if (l<=fitdf) NA else Box.test(series, lag=l, type="Ljung-Box", fitdf=fitdf)$p.value
+    return(c("lag"=l,"pval"=pval))
+  })
+  return(t(pvals))
+}
+
+# Combining both tests
+arimafit <- function(estim){
+  adjust <- round(signif(estim),3)
+  pvals <- Qtests(estim$residuals,24,length(estim$coef)-1)
+  pvals <- matrix(apply(matrix(1:24,nrow=6),2,function(c) round(pvals[c,],3)),nrow=6)
+  colnames(pvals) <- rep(c("lag", "pval"),4)
+  cat("coefficients nullity tests :\n")
+  print(adjust)
+  cat("\n tests of autocorrelation of the residuals : \n")
+  print(pvals) }
+
+# Examples of models which are not good 
+# (because not well-adjusted or not valid)
+arima111 <- arima(spread,c(1,1,1),include.mean=F)
+arima215 <- arima(spread,c(2,1,5),include.mean=F)
+arimafit(arima111)
+arimafit(arima215)
+
+
+# So we estimate ARIMA sub-models with 0 <= p <= 3 and 0 <= q <= 13
+# We compute AIC and BIC for each of these models
 
 pmax <- 3
-qmax <- 2
+qmax <- 13
 
 mat <- matrix(NA,nrow=pmax+1,ncol=qmax+1) #empty matrix to fill
 rownames(mat) <- paste0("p=",0:pmax) #renames lines
 colnames(mat) <- paste0("q=",0:qmax) #renames columns
-AICs <- mat #AIC matrix not filled non remplie
-BICs <- mat #BIC matrix not filled non remplie
+AICs <- mat #AIC matrix not filled 
+BICs <- mat #BIC matrix not filled 
 pqs <- expand.grid(0:pmax,0:qmax) #all possible combinations of p and q
 for (row in 1:dim(pqs)[1]){ #loop for each (p,q)
   p <- pqs[row,1] #gets p
@@ -100,40 +139,33 @@ arima310 <- arima(spread,c(3,1,0),include.mean=F)
 BICs #prints the BICs  
 
 BICs==min(BICs) #prints the model minimizing the BIC
-# It's arima310
+# It's still arima310
 
-# ESTIMATE THE MODEL PARAMETERS
-
+# Student and Ljung-Box Tests on chosen model
 arima310
+arimafit(arima310)
 # The AR(3) coefficient is statistically significant
-#  (the ratio between the estimated coefficient and the standard
+# (the ratio between the estimated coefficient and the standard
 # error is higher in absolute value than 1.96)
-# so the ARIMA(3,1,0) is well adjusted
+# so the ARIMA(3,1,0) is well adjusted.
+
+# The model ARIMA(3,1,0) is also valid as we never reject the absence of 
+# residual autocorrelation.
+
+# ANSWER: the model ARIMA(3,1,0) is the best model for prediction.
+# It minimizes AIC and BIC criteria, is well-adjusted and valid.
 
 
-# TO DO / COEFFICIENTS OF THE CHOSEN ARMA MODEL
+# ========== QUESTION 6 & 7 ========================
 
-# ========== QUESTION 5 ========================
+# see Project report.
 
 
-#Ljung Box test : autocorrelation of the residuals
+# ========== QUESTION 8 ========================
 
-Qtests <- function(series, k, fitdf=0) {
-  pvals <- apply(matrix(1:k), 1, FUN=function(l) {
-    pval <- if (l<=fitdf) NA else Box.test(series, lag=l, type="Ljung-Box", fitdf=fitdf)$p.value
-    return(c("lag"=l,"pval"=pval))
-  })
-  return(t(pvals))
-}
+# .............. to complete
 
-Qtests(arima310$residuals,24,fitdf=1)
+# ========== QUESTION 9 ========================
 
-# We never reject the absence of residual autocorrelation.
-# The ARIMA(3,1,0) is valid
-
-# TO DO QQPLOT NORMALITY OF RESIDUALS
-# JARQUE BERA TEST ???
-
-# TO DO Write the arma model
-
+# see Project report.
 
