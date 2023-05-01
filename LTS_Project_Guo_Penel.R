@@ -176,9 +176,6 @@ arima_model <- arima(ts_data, order = c(3,1,0))
 alpha <- 0.95
 forecasted <- forecast(arima_model, h=2,level = alpha)
 
-# Plot with new values and confidence regions zoomed in on latest values 
-plot(forecasted, xlab = "Time", ylab = "Values",xlim = c(250,340), ylim = c(0,400))
-
 # Plot with new values and confidence regions 
 plot(forecasted, xlab = "Time", ylab = "Values")
 
