@@ -19,7 +19,7 @@ data <- read.csv(datafile,sep=";")
 dates_char <- as.character(data$dates)
 dates_char[1] # first date
 tail(dates_char,1) # last date
-dates <- as.yearmon(seq(from=1990+0/12, to=2016+11/12, by=1/12)) 
+dates <- as.yearmon(seq(from=1990+0/12, to=2016+10/12, by=1/12)) 
 spread <- zoo(data$spread, order.by=dates)
 plot(spread, xlab = "dates", ylab = "values") # plot initial series
 
@@ -28,7 +28,7 @@ decomp<-decompose(spread)
 plot(decomp)
 
 # ANSWER: The chosen series represents the Industrial Production Index associated
-# to the manufacturing of tobacco-based products from 1990 until 2017 
+# to the manufacturing of tobacco-based products from 1990 until november 2016
 # We observe a decreasing linear trend. The series is not stationary.
 
 # ========== QUESTION 2 ========================
