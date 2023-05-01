@@ -167,7 +167,7 @@ arimafit(arima310)
 library(forecast)
 
 # Transform with the "ts" function (ts for "time series")
-ts_data <- ts(spread)
+ts_data <- ts(spread, frequency = 12, start = 1990)
 
 # Model found in the previous part
 arima_model <- arima(ts_data, order = c(3,1,0))
